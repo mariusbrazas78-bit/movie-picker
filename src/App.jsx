@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import MovieCard from './components/MovieCard.jsx'
 import { DEMO_GENRES, DEMO_MOODS, DEMO_MOVIES } from './data/demoMovies.js'
 import './App.css'
@@ -6,6 +7,16 @@ const recommendedMovie = DEMO_MOVIES[1]
 const favoritePreview = DEMO_MOVIES[0]
 
 function App() {
+  const [selectedGenre, setSelectedGenre] = useState('')
+  const [selectedMood, setSelectedMood] = useState('')
+
+  const filteredMovies = DEMO_MOVIES.filter((movie) => {
+    const matchesGenre = !selectedGenre || movie.genre === selectedGenre
+    const matchesMood = !selectedMood || movie.mood === selectedMood
+
+    return matchesGenre && matchesMood
+  })
+
   return (
     <div className="app">
       <header className="hero">
@@ -21,15 +32,18 @@ function App() {
           <div className="panel__intro">
             <h2 id="filters-heading">Filtravimas</h2>
             <p>
-              Pasirinkite žanrą ir nuotaiką. Filtravimo logika bus pridėta
-              vėliau.
+              Pasirinkite žanrą ir nuotaiką, kad rastumėte filmą vakarui.
             </p>
           </div>
 
           <form className="filters" onSubmit={(event) => event.preventDefault()}>
             <label className="field">
               <span>Žanras</span>
-              <select name="genre" defaultValue="">
+              <select
+                name="genre"
+                value={selectedGenre}
+                onChange={(event) => setSelectedGenre(event.target.value)}
+              >
                 <option value="">Visi žanrai</option>
                 {DEMO_GENRES.map((genre) => (
                   <option key={genre} value={genre}>
@@ -41,7 +55,11 @@ function App() {
 
             <label className="field">
               <span>Nuotaika</span>
-              <select name="mood" defaultValue="">
+              <select
+                name="mood"
+                value={selectedMood}
+                onChange={(event) => setSelectedMood(event.target.value)}
+              >
                 <option value="">Visos nuotaikos</option>
                 {DEMO_MOODS.map((mood) => (
                   <option key={mood} value={mood}>
@@ -80,9 +98,13 @@ function App() {
           <p className="demo-note">Demonstraciniai duomenys</p>
 
           <div className="movie-grid">
-            {DEMO_MOVIES.map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
+            {filteredMovies.length > 0 ? (
+              filteredMovies.map((movie) => (
+                <MovieCard key={movie.id} movie={movie} />
+              ))
+            ) : (
+              <p>Pagal pasirinktus filtrus filmų nerasta.</p>
+            )}
           </div>
         </section>
 
