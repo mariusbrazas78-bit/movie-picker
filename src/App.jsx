@@ -4,7 +4,24 @@ import { DEMO_MOVIES } from './data/demoMovies.js'
 import { fetchMovies } from './lib/movies.js'
 import './App.css'
 
-const favoritePreview = DEMO_MOVIES[0]
+const FAVORITES_STORAGE_KEY = 'movie-picker-favorites'
+
+function readStoredFavorites() {
+  try {
+    const storedFavorites = window.localStorage.getItem(FAVORITES_STORAGE_KEY)
+    if (!storedFavorites) return []
+
+    const parsedFavorites = JSON.parse(storedFavorites)
+    if (!Array.isArray(parsedFavorites)) return []
+
+    return parsedFavorites.filter(
+      (movie) => movie && typeof movie === 'object' && movie.id != null,
+    )
+  } catch (error) {
+    console.error('Nepavyko nuskaityti mėgstamiausių filmų:', error)
+    return []
+  }
+}
 
 function App() {
   const [remoteMovies, setRemoteMovies] = useState([])
@@ -14,6 +31,30 @@ function App() {
   const [selectedMood, setSelectedMood] = useState('')
   const [recommendedMovie, setRecommendedMovie] = useState(null)
   const [recommendationMessage, setRecommendationMessage] = useState('')
+  const [favoriteMovies, setFavoriteMovies] = useState(readStoredFavorites)
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        FAVORITES_STORAGE_KEY,
+        JSON.stringify(favoriteMovies),
+      )
+    } catch (error) {
+      console.error('Nepavyko išsaugoti mėgstamiausių filmų:', error)
+    }
+  }, [favoriteMovies])
+
+  function handleToggleFavorite(movie) {
+    setFavoriteMovies((currentFavorites) => {
+      const isFavorite = currentFavorites.some(
+        (favorite) => favorite.id === movie.id,
+      )
+
+      return isFavorite
+        ? currentFavorites.filter((favorite) => favorite.id !== movie.id)
+        : [...currentFavorites, movie]
+    })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -156,7 +197,14 @@ function App() {
             </p>
           </div>
           {recommendedMovie ? (
-            <MovieCard movie={recommendedMovie} featured />
+            <MovieCard
+              movie={recommendedMovie}
+              featured
+              isFavorite={favoriteMovies.some(
+                (movie) => movie.id === recommendedMovie.id,
+              )}
+              onToggleFavorite={handleToggleFavorite}
+            />
           ) : (
             <p role="status">
               {recommendationMessage || 'Paspauskite „Parinkti filmą“, kad gautumėte rekomendaciją.'}
@@ -186,7 +234,14 @@ function App() {
             filteredMovies.length > 0 ? (
               <div className="movie-grid">
                 {filteredMovies.map((movie) => (
-                  <MovieCard key={movie.id} movie={movie} />
+                  <MovieCard
+                    key={movie.id}
+                    movie={movie}
+                    isFavorite={favoriteMovies.some(
+                      (favorite) => favorite.id === movie.id,
+                    )}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
                 ))}
               </div>
             ) : (
@@ -200,15 +255,26 @@ function App() {
         <section className="panel" aria-labelledby="favorites-heading">
           <div className="panel__intro">
             <h2 id="favorites-heading">Mėgstamiausi filmai</h2>
-            <p>
-              Čia vėliau atsiras jūsų išsaugoti filmai. Dabar rodomas tik
-              dizaino pavyzdys.
-            </p>
+            <p>Čia rodomi jūsų išsaugoti filmai.</p>
           </div>
 
-          <div className="movie-grid movie-grid--favorites">
-            <MovieCard movie={favoritePreview} variant="favorite" />
-          </div>
+          {favoriteMovies.length > 0 ? (
+            <div className="movie-grid movie-grid--favorites">
+              {favoriteMovies.map((movie) => (
+                <MovieCard
+                  key={movie.id}
+                  movie={movie}
+                  variant="favorite"
+                  isFavorite
+                  onToggleFavorite={handleToggleFavorite}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="status" role="status">
+              Mėgstamiausių filmų dar nėra.
+            </p>
+          )}
         </section>
       </main>
 
