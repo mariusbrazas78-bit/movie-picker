@@ -171,7 +171,14 @@ function App() {
     const formData = new FormData(event.currentTarget)
     const email = formData.get('email')
     const password = formData.get('password')
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    let data
+    let error
+    try {
+      ;({ data, error } = await supabase.auth.signInWithPassword({ email, password }))
+    } catch {
+      setAuthError('Prisijungti nepavyko dėl ryšio klaidos. Patikrinkite ryšį ir bandykite dar kartą.')
+      return
+    }
 
     if (error) {
       setAuthError('Prisijungti nepavyko. Patikrinkite el. paštą ir slaptažodį.')
@@ -189,7 +196,13 @@ function App() {
 
     if (!supabase) return
 
-    const { error } = await supabase.auth.signOut()
+    let error
+    try {
+      ;({ error } = await supabase.auth.signOut())
+    } catch {
+      setAuthError('Atsijungti nepavyko dėl ryšio klaidos. Patikrinkite ryšį ir bandykite dar kartą.')
+      return
+    }
     if (error) {
       setAuthError('Atsijungti nepavyko. Bandykite dar kartą.')
       return
@@ -355,7 +368,7 @@ function App() {
         setLoadError(
           error instanceof Error
             ? error.message
-            : 'Nepavyko prisijungti prie duomenų bazės.',
+            : 'Nepavyko prisijungti prie duomenų bazės. Patikrinkite ryšį ir bandykite dar kartą.',
         )
         setLoadState('error')
       }
