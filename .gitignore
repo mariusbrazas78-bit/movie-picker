@@ -1,3 +1,6 @@
+
+# Movie Picker - Git Ignore
+
 # Logs
 logs
 *.log
@@ -7,15 +10,28 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies
+node_modules/
+
+# Build files
+dist/
+dist-ssr/
 *.local
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Supabase local files
+supabase/.branches/
+supabase/.profiles/
+supabase/.temp/
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
