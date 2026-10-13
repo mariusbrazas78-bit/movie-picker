@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import MovieCard from './components/MovieCard.jsx'
-import { DEMO_MOVIES } from './data/demoMovies.js'
 import { fetchMovies } from './lib/movies.js'
 import './App.css'
 
