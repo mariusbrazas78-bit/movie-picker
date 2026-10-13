@@ -3,6 +3,12 @@ import { isSupabaseConfigured, supabase } from './supabase.js'
 
 const MOVIE_COLUMNS = 'id, title, genre, mood, description, release_year, rating'
 
+function getErrorMessage(error, fallback) {
+  return error instanceof Error && error.message
+    ? error.message
+    : fallback
+}
+
 function normalizeMovie(movie) {
   return {
     ...movie,
@@ -11,40 +17,42 @@ function normalizeMovie(movie) {
   }
 }
 
-export async function fetchMovies() {
+function requireSupabase() {
   if (!isSupabaseConfigured() || !supabase) {
-    console.error('Supabase klaida: trūksta URL arba rakto .env faile')
     throw new Error('Nepavyko prisijungti prie duomenų bazės.')
   }
+  return supabase
+}
 
-  const { data, error } = await supabase
+export async function fetchMovies(client = requireSupabase()) {
+  const { data, error } = await client
     .schema('public')
     .from('movies')
     .select(MOVIE_COLUMNS)
     .order('title', { ascending: true })
 
   if (error) {
-    console.error('Supabase klaida:', error)
     throw new Error('Nepavyko prisijungti prie duomenų bazės.')
   }
 
   return (data ?? []).map(normalizeMovie)
 }
 
-export async function createMovie(movie) {
-  if (!isSupabaseConfigured() || !supabase) {
-    throw new Error('Nepavyko prisijungti prie duomenų bazės.')
+export async function createMovie(movie, client = requireSupabase()) {
+  let data
+  let error
+  try {
+    ;({ data, error } = await client
+      .schema('public')
+      .from('movies')
+      .insert(movie)
+      .select(MOVIE_COLUMNS)
+      .single())
+  } catch (cause) {
+    throw new Error(getErrorMessage(cause, 'Filmo pridėti nepavyko. Patikrinkite ryšį ir bandykite dar kartą.'), { cause })
   }
 
-  const { data, error } = await supabase
-    .schema('public')
-    .from('movies')
-    .insert(movie)
-    .select(MOVIE_COLUMNS)
-    .single()
-
   if (error) {
-    console.error('Supabase filmo sukūrimo klaida:', error)
     throw new Error(
       error.code === '42501'
         ? 'Neturite teisės pridėti filmų. Prisijunkite administratoriaus paskyra.'
@@ -55,21 +63,22 @@ export async function createMovie(movie) {
   return normalizeMovie(data)
 }
 
-export async function updateMovie(id, movie) {
-  if (!isSupabaseConfigured() || !supabase) {
-    throw new Error('Nepavyko prisijungti prie duomenų bazės.')
+export async function updateMovie(id, movie, client = requireSupabase()) {
+  let data
+  let error
+  try {
+    ;({ data, error } = await client
+      .schema('public')
+      .from('movies')
+      .update(movie)
+      .eq('id', id)
+      .select(MOVIE_COLUMNS)
+      .single())
+  } catch (cause) {
+    throw new Error(getErrorMessage(cause, 'Filmo atnaujinti nepavyko. Patikrinkite ryšį ir bandykite dar kartą.'), { cause })
   }
 
-  const { data, error } = await supabase
-    .schema('public')
-    .from('movies')
-    .update(movie)
-    .eq('id', id)
-    .select(MOVIE_COLUMNS)
-    .single()
-
   if (error) {
-    console.error('Supabase filmo atnaujinimo klaida:', error)
     throw new Error(
       error.code === '42501'
         ? 'Neturite teisės redaguoti filmų.'
@@ -80,21 +89,22 @@ export async function updateMovie(id, movie) {
   return normalizeMovie(data)
 }
 
-export async function deleteMovie(id) {
-  if (!isSupabaseConfigured() || !supabase) {
-    throw new Error('Nepavyko prisijungti prie duomenų bazės.')
+export async function deleteMovie(id, client = requireSupabase()) {
+  let data
+  let error
+  try {
+    ;({ data, error } = await client
+      .schema('public')
+      .from('movies')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle())
+  } catch (cause) {
+    throw new Error(getErrorMessage(cause, 'Filmo ištrinti nepavyko. Patikrinkite ryšį ir bandykite dar kartą.'), { cause })
   }
 
-  const { data, error } = await supabase
-    .schema('public')
-    .from('movies')
-    .delete()
-    .eq('id', id)
-    .select('id')
-    .maybeSingle()
-
   if (error) {
-    console.error('Supabase filmo ištrynimo klaida:', error)
     throw new Error(
       error.code === '42501'
         ? 'Neturite teisės ištrinti filmų.'
