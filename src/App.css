@@ -106,7 +106,7 @@
 
 .demo-note {
   display: inline-block;
-  margin: 0 0 1rem;
+  margin: 1.25rem 0 1rem;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
   background: var(--chip);
@@ -114,6 +114,15 @@
   font-size: 0.78rem;
   font-weight: 650;
   letter-spacing: 0.02em;
+}
+
+.status {
+  margin: 0 0 1rem;
+  color: var(--muted);
+}
+
+.status--error {
+  color: #9a3412;
 }
 
 .movie-grid {

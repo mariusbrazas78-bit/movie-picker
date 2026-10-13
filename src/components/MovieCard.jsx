@@ -6,7 +6,7 @@ function MovieCard({ movie, variant = 'catalog', featured = false }) {
       <header className="movie-card__header">
         <h3 className="movie-card__title">{movie.title}</h3>
         <p className="movie-card__rating" aria-label={`Įvertinimas ${movie.rating} iš 10`}>
-          <span className="movie-card__rating-value">{movie.rating.toFixed(1)}</span>
+          <span className="movie-card__rating-value">{Number(movie.rating).toFixed(1)}</span>
           <span className="movie-card__rating-scale"> / 10</span>
         </p>
       </header>

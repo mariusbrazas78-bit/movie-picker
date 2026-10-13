@@ -1,11 +1,51 @@
+import { useEffect, useState } from 'react'
 import MovieCard from './components/MovieCard.jsx'
 import { DEMO_GENRES, DEMO_MOODS, DEMO_MOVIES } from './data/demoMovies.js'
+import { fetchMovies } from './lib/movies.js'
 import './App.css'
 
 const recommendedMovie = DEMO_MOVIES[1]
 const favoritePreview = DEMO_MOVIES[0]
 
 function App() {
+  const [remoteMovies, setRemoteMovies] = useState([])
+  const [loadState, setLoadState] = useState('loading')
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadMovies() {
+      try {
+        const movies = await fetchMovies()
+        if (cancelled) {
+          return
+        }
+
+        setRemoteMovies(movies)
+        setLoadState(movies.length === 0 ? 'empty' : 'ready')
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+
+        setRemoteMovies([])
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : 'Nepavyko prisijungti prie duomenų bazės.',
+        )
+        setLoadState('error')
+      }
+    }
+
+    loadMovies()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   return (
     <div className="app">
       <header className="hero">
@@ -72,10 +112,36 @@ function App() {
           <div className="panel__intro">
             <h2 id="catalog-heading">Filmų sąrašas</h2>
             <p>
-              Žemiau – keli aiškiai pažymėti demonstraciniai filmai. Tikras
-              katalogas vėliau bus kraunamas iš duomenų bazės.
+              Žemiau rodomi filmai iš duomenų bazės. Demonstraciniai filmai
+              palikti dizainui patikrinti.
             </p>
           </div>
+
+          {loadState === 'loading' ? (
+            <p className="status" role="status">
+              Kraunami filmai...
+            </p>
+          ) : null}
+
+          {loadState === 'error' ? (
+            <p className="status status--error" role="alert">
+              {loadError}
+            </p>
+          ) : null}
+
+          {loadState === 'empty' ? (
+            <p className="status" role="status">
+              Filmų sąrašas tuščias
+            </p>
+          ) : null}
+
+          {loadState === 'ready' ? (
+            <div className="movie-grid">
+              {remoteMovies.map((movie) => (
+                <MovieCard key={movie.id} movie={movie} />
+              ))}
+            </div>
+          ) : null}
 
           <p className="demo-note">Demonstraciniai duomenys</p>
 
