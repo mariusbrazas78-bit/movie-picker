@@ -93,8 +93,22 @@
   font-weight: 500;
 }
 
+.field textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  resize: vertical;
+}
+
 .field select:focus-visible,
 .field input:focus-visible,
+.field textarea:focus-visible,
 .pick-button:focus-visible,
 .movie-card__action:focus-visible,
 .admin-button:focus-visible {
@@ -123,6 +137,18 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 1rem;
   align-items: end;
+}
+
+.movie-admin-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.movie-admin-form__description {
+  grid-column: 1 / -1;
 }
 
 .admin-auth-status {
@@ -277,8 +303,13 @@
 
   .filters,
   .admin-login,
+  .movie-admin-form,
   .movie-grid {
     grid-template-columns: 1fr;
+  }
+
+  .movie-admin-form__description {
+    grid-column: auto;
   }
 
   .pick-button {

@@ -1,10 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import MovieCard from './components/MovieCard.jsx'
-import { fetchMovies } from './lib/movies.js'
+import { createMovie, fetchMovies } from './lib/movies.js'
 import { supabase } from './lib/supabase.js'
 import './App.css'
 
 const FAVORITES_STORAGE_KEY = 'movie-picker-favorites'
+const MOVIE_GENRES = [
+  'Komedija',
+  'Drama',
+  'Veiksmo',
+  'Romantinis',
+  'Mokslinė fantastika',
+]
+const MOVIE_MOODS = ['Linksma', 'Romantiška', 'Rimta', 'Įtempta']
 
 function readStoredFavorites() {
   try {
@@ -24,6 +32,7 @@ function readStoredFavorites() {
 }
 
 function App() {
+  const moviesLoadVersion = useRef(0)
   const [remoteMovies, setRemoteMovies] = useState([])
   const [loadState, setLoadState] = useState('loading')
   const [loadError, setLoadError] = useState('')
@@ -36,6 +45,9 @@ function App() {
   const [authLoading, setAuthLoading] = useState(Boolean(supabase))
   const [authError, setAuthError] = useState('')
   const [authMessage, setAuthMessage] = useState('')
+  const [isCreatingMovie, setIsCreatingMovie] = useState(false)
+  const [createMessage, setCreateMessage] = useState('')
+  const [createError, setCreateError] = useState('')
 
   useEffect(() => {
     if (!supabase) return undefined
@@ -117,20 +129,81 @@ function App() {
     setAuthMessage('Atsijungėte.')
   }
 
+  async function handleCreateMovie(event) {
+    event.preventDefault()
+    if (!isAdmin || isCreatingMovie) return
+
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    const title = String(formData.get('title') ?? '').trim()
+    const genre = String(formData.get('genre') ?? '')
+    const mood = String(formData.get('mood') ?? '')
+    const description = String(formData.get('description') ?? '').trim()
+    const releaseYear = Number(formData.get('release_year'))
+    const rating = Number(formData.get('rating'))
+
+    setCreateMessage('')
+    setCreateError('')
+
+    if (!title || !genre || !mood || !description) {
+      setCreateError('Užpildykite visus laukus.')
+      return
+    }
+    if (!Number.isInteger(releaseYear) || releaseYear < 1888 || releaseYear > 2100) {
+      setCreateError('Išleidimo metai turi būti sveikasis skaičius nuo 1888 iki 2100.')
+      return
+    }
+    if (!Number.isFinite(rating) || rating < 0 || rating > 10) {
+      setCreateError('Įvertinimas turi būti skaičius nuo 0 iki 10.')
+      return
+    }
+
+    setIsCreatingMovie(true)
+    try {
+      const createdMovie = await createMovie({
+        title,
+        genre,
+        mood,
+        description,
+        release_year: releaseYear,
+        rating,
+      })
+
+      moviesLoadVersion.current += 1
+      setRemoteMovies((currentMovies) =>
+        [...currentMovies, createdMovie].sort((first, second) =>
+          first.title.localeCompare(second.title),
+        ),
+      )
+      setLoadState('ready')
+      setCreateMessage(`Filmas „${createdMovie.title}“ sėkmingai pridėtas.`)
+      form.reset()
+    } catch (error) {
+      setCreateError(
+        error instanceof Error
+          ? error.message
+          : 'Filmo pridėti nepavyko. Bandykite dar kartą.',
+      )
+    } finally {
+      setIsCreatingMovie(false)
+    }
+  }
+
   const isAdmin = authSession?.user?.app_metadata?.role === 'admin'
 
   useEffect(() => {
     let cancelled = false
+    const requestVersion = ++moviesLoadVersion.current
 
     async function loadMovies() {
       try {
         const movies = await fetchMovies()
-        if (cancelled) return
+        if (cancelled || requestVersion !== moviesLoadVersion.current) return
 
         setRemoteMovies(movies)
         setLoadState(movies.length === 0 ? 'empty' : 'ready')
       } catch (error) {
-        if (cancelled) return
+        if (cancelled || requestVersion !== moviesLoadVersion.current) return
 
         setRemoteMovies([])
         setLoadError(
@@ -245,9 +318,45 @@ function App() {
           <section className="panel" aria-labelledby="admin-tools-heading">
             <div className="panel__intro">
               <h2 id="admin-tools-heading">Filmų administravimas</h2>
-              <p>Administratoriaus įrankiai bus pateikti čia.</p>
+              <p>Pridėkite filmą į viešą katalogą.</p>
             </div>
-            <p className="status">Filmų kūrimo, redagavimo ir trynimo funkcijos bus pridėtos kitame etape.</p>
+            <form className="movie-admin-form" onSubmit={handleCreateMovie}>
+              <label className="field">
+                <span>Pavadinimas</span>
+                <input name="title" type="text" maxLength="200" required />
+              </label>
+              <label className="field">
+                <span>Žanras</span>
+                <select name="genre" defaultValue="" required>
+                  <option value="" disabled>Pasirinkite žanrą</option>
+                  {MOVIE_GENRES.map((genre) => <option key={genre} value={genre}>{genre}</option>)}
+                </select>
+              </label>
+              <label className="field">
+                <span>Nuotaika</span>
+                <select name="mood" defaultValue="" required>
+                  <option value="" disabled>Pasirinkite nuotaiką</option>
+                  {MOVIE_MOODS.map((mood) => <option key={mood} value={mood}>{mood}</option>)}
+                </select>
+              </label>
+              <label className="field movie-admin-form__description">
+                <span>Aprašymas</span>
+                <textarea name="description" rows="4" maxLength="2000" required />
+              </label>
+              <label className="field">
+                <span>Išleidimo metai</span>
+                <input name="release_year" type="number" min="1888" max="2100" step="1" required />
+              </label>
+              <label className="field">
+                <span>Įvertinimas (0–10)</span>
+                <input name="rating" type="number" min="0" max="10" step="0.1" required />
+              </label>
+              <button type="submit" className="pick-button" disabled={isCreatingMovie}>
+                {isCreatingMovie ? 'Pridedama...' : 'Pridėti filmą'}
+              </button>
+            </form>
+            {createMessage ? <p className="status" role="status">{createMessage}</p> : null}
+            {createError ? <p className="status status--error" role="alert">{createError}</p> : null}
           </section>
         ) : null}
 

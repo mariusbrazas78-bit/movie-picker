@@ -30,3 +30,27 @@ export async function fetchMovies() {
 
   return (data ?? []).map(normalizeMovie)
 }
+
+export async function createMovie(movie) {
+  if (!isSupabaseConfigured() || !supabase) {
+    throw new Error('Nepavyko prisijungti prie duomenų bazės.')
+  }
+
+  const { data, error } = await supabase
+    .schema('public')
+    .from('movies')
+    .insert(movie)
+    .select(MOVIE_COLUMNS)
+    .single()
+
+  if (error) {
+    console.error('Supabase filmo sukūrimo klaida:', error)
+    throw new Error(
+      error.code === '42501'
+        ? 'Neturite teisės pridėti filmų. Prisijunkite administratoriaus paskyra.'
+        : 'Filmo pridėti nepavyko. Patikrinkite duomenis ir bandykite dar kartą.',
+    )
+  }
+
+  return normalizeMovie(data)
+}
