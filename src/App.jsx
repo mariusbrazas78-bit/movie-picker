@@ -3,12 +3,13 @@ import MovieCard from './components/MovieCard.jsx'
 import { DEMO_GENRES, DEMO_MOODS, DEMO_MOVIES } from './data/demoMovies.js'
 import './App.css'
 
-const recommendedMovie = DEMO_MOVIES[1]
 const favoritePreview = DEMO_MOVIES[0]
 
 function App() {
   const [selectedGenre, setSelectedGenre] = useState('')
   const [selectedMood, setSelectedMood] = useState('')
+  const [recommendedMovie, setRecommendedMovie] = useState(null)
+  const [recommendationMessage, setRecommendationMessage] = useState('')
 
   const filteredMovies = DEMO_MOVIES.filter((movie) => {
     const matchesGenre = !selectedGenre || movie.genre === selectedGenre
@@ -17,6 +18,22 @@ function App() {
     return matchesGenre && matchesMood
   })
 
+  function handlePickMovie() {
+    if (filteredMovies.length === 0) {
+      setRecommendedMovie(null)
+      setRecommendationMessage('Pagal pasirinktus filtrus filmų nerasta.')
+      return
+    }
+
+    const candidates = filteredMovies.filter(
+      (movie) => movie.id !== recommendedMovie?.id,
+    )
+    const availableMovies = candidates.length > 0 ? candidates : filteredMovies
+    const randomIndex = Math.floor(Math.random() * availableMovies.length)
+
+    setRecommendedMovie(availableMovies[randomIndex])
+    setRecommendationMessage('')
+  }
   return (
     <div className="app">
       <header className="hero">
@@ -36,7 +53,13 @@ function App() {
             </p>
           </div>
 
-          <form className="filters" onSubmit={(event) => event.preventDefault()}>
+          <form
+            className="filters"
+            onSubmit={(event) => {
+              event.preventDefault()
+              handlePickMovie()
+            }}
+          >
             <label className="field">
               <span>Žanras</span>
               <select
@@ -79,11 +102,16 @@ function App() {
           <div className="panel__intro">
             <h2 id="recommended-heading">Rekomenduojamas filmas</h2>
             <p>
-              Demonstracinis pasiūlymas dizainui. Atsitiktinis parinkimas bus
-              įgyvendintas kitame etape.
+              Atsitiktinai parinktas filmas pagal jūsų pasirinktus filtrus.
             </p>
           </div>
-          <MovieCard movie={recommendedMovie} featured />
+          {recommendedMovie ? (
+            <MovieCard movie={recommendedMovie} featured />
+          ) : (
+            <p role="status">
+              {recommendationMessage || 'Paspauskite „Parinkti filmą“, kad gautumėte rekomendaciją.'}
+            </p>
+          )}
         </section>
 
         <section className="panel" aria-labelledby="catalog-heading">
