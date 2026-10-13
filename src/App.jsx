@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import MovieCard from './components/MovieCard.jsx'
 import { fetchMovies } from './lib/movies.js'
+import { supabase } from './lib/supabase.js'
 import './App.css'
 
 const FAVORITES_STORAGE_KEY = 'movie-picker-favorites'
@@ -31,6 +32,25 @@ function App() {
   const [recommendedMovie, setRecommendedMovie] = useState(null)
   const [recommendationMessage, setRecommendationMessage] = useState('')
   const [favoriteMovies, setFavoriteMovies] = useState(readStoredFavorites)
+  const [authSession, setAuthSession] = useState(null)
+  const [authLoading, setAuthLoading] = useState(Boolean(supabase))
+  const [authError, setAuthError] = useState('')
+  const [authMessage, setAuthMessage] = useState('')
+
+  useEffect(() => {
+    if (!supabase) return undefined
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthSession(session)
+      setAuthError('')
+      setAuthMessage('')
+      setAuthLoading(false)
+    })
+
+    return () => {
+      data.subscription.unsubscribe()
+    }
+  }, [])
 
   useEffect(() => {
     try {
@@ -54,6 +74,50 @@ function App() {
         : [...currentFavorites, movie]
     })
   }
+
+  async function handleSignIn(event) {
+    event.preventDefault()
+    const form = event.currentTarget
+    setAuthError('')
+    setAuthMessage('')
+
+    if (!supabase) {
+      setAuthError('Prisijungimas nepasiekiamas: trūksta Supabase konfigūracijos.')
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
+    const email = formData.get('email')
+    const password = formData.get('password')
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      setAuthError('Prisijungti nepavyko. Patikrinkite el. paštą ir slaptažodį.')
+      return
+    }
+
+    setAuthSession(data.session)
+    setAuthMessage('Sėkmingai prisijungėte.')
+    form.reset()
+  }
+
+  async function handleSignOut() {
+    setAuthError('')
+    setAuthMessage('')
+
+    if (!supabase) return
+
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      setAuthError('Atsijungti nepavyko. Bandykite dar kartą.')
+      return
+    }
+
+    setAuthSession(null)
+    setAuthMessage('Atsijungėte.')
+  }
+
+  const isAdmin = authSession?.user?.app_metadata?.role === 'admin'
 
   useEffect(() => {
     let cancelled = false
@@ -135,6 +199,58 @@ function App() {
       </header>
 
       <main>
+        <section className="panel" aria-labelledby="admin-login-heading">
+          <div className="panel__intro">
+            <h2 id="admin-login-heading">Administratoriaus prisijungimas</h2>
+            <p>Prisijungti gali tik Supabase Auth paskyra, kuriai suteiktas administratoriaus vaidmuo.</p>
+          </div>
+
+          {authLoading ? (
+            <p className="status" role="status">Tikrinama prisijungimo būsena...</p>
+          ) : null}
+
+          {!authLoading && !authSession ? (
+            <form className="admin-login" onSubmit={handleSignIn}>
+              <label className="field">
+                <span>El. paštas</span>
+                <input name="email" type="email" autoComplete="username" required />
+              </label>
+              <label className="field">
+                <span>Slaptažodis</span>
+                <input name="password" type="password" autoComplete="current-password" required />
+              </label>
+              <button type="submit" className="pick-button">Prisijungti</button>
+            </form>
+          ) : null}
+
+          {!authLoading && authSession && !isAdmin ? (
+            <div className="admin-auth-status">
+              <p className="status">Esate prisijungę, tačiau ši paskyra neturi administratoriaus teisių.</p>
+              <button type="button" className="admin-button" onClick={handleSignOut}>Atsijungti</button>
+            </div>
+          ) : null}
+
+          {!authLoading && isAdmin ? (
+            <div className="admin-auth-status">
+              <p className="status">Prisijungė administratorius: {authSession.user.email}</p>
+              <button type="button" className="admin-button" onClick={handleSignOut}>Atsijungti</button>
+            </div>
+          ) : null}
+
+          {authError ? <p className="status status--error" role="alert">{authError}</p> : null}
+          {authMessage ? <p className="status" role="status">{authMessage}</p> : null}
+        </section>
+
+        {isAdmin ? (
+          <section className="panel" aria-labelledby="admin-tools-heading">
+            <div className="panel__intro">
+              <h2 id="admin-tools-heading">Filmų administravimas</h2>
+              <p>Administratoriaus įrankiai bus pateikti čia.</p>
+            </div>
+            <p className="status">Filmų kūrimo, redagavimo ir trynimo funkcijos bus pridėtos kitame etape.</p>
+          </section>
+        ) : null}
+
         <section className="panel" aria-labelledby="filters-heading">
           <div className="panel__intro">
             <h2 id="filters-heading">Filtravimas</h2>
