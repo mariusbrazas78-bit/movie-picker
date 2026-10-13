@@ -268,9 +268,20 @@ function App() {
       setFavoriteMovies((favorites) => favorites.map((item) =>
         item.id === movieId ? updatedMovie : item,
       ))
-      setRecommendedMovie((current) =>
-        current?.id === movieId ? updatedMovie : current,
-      )
+      if (recommendedMovie?.id === movieId) {
+        const stillMatchesFilters =
+          (!selectedGenre || updatedMovie.genre === selectedGenre) &&
+          (!selectedMood || updatedMovie.mood === selectedMood)
+
+        if (stillMatchesFilters) {
+          setRecommendedMovie(updatedMovie)
+        } else {
+          setRecommendedMovie(null)
+          setRecommendationMessage(
+            'Rekomenduotas filmas nebeatitinka pasirinktų filtrų. Parinkite kitą filmą.',
+          )
+        }
+      }
       if (selectedGenre && !updatedMovies.some((item) => item.genre === selectedGenre)) {
         setSelectedGenre('')
       }
