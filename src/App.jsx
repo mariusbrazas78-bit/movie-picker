@@ -1,17 +1,51 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import MovieCard from './components/MovieCard.jsx'
-import { DEMO_GENRES, DEMO_MOODS, DEMO_MOVIES } from './data/demoMovies.js'
+import { DEMO_MOVIES } from './data/demoMovies.js'
+import { fetchMovies } from './lib/movies.js'
 import './App.css'
 
 const favoritePreview = DEMO_MOVIES[0]
 
 function App() {
+  const [remoteMovies, setRemoteMovies] = useState([])
+  const [loadState, setLoadState] = useState('loading')
+  const [loadError, setLoadError] = useState('')
   const [selectedGenre, setSelectedGenre] = useState('')
   const [selectedMood, setSelectedMood] = useState('')
   const [recommendedMovie, setRecommendedMovie] = useState(null)
   const [recommendationMessage, setRecommendationMessage] = useState('')
 
-  const filteredMovies = DEMO_MOVIES.filter((movie) => {
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadMovies() {
+      try {
+        const movies = await fetchMovies()
+        if (cancelled) return
+
+        setRemoteMovies(movies)
+        setLoadState(movies.length === 0 ? 'empty' : 'ready')
+      } catch (error) {
+        if (cancelled) return
+
+        setRemoteMovies([])
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : 'Nepavyko prisijungti prie duomenų bazės.',
+        )
+        setLoadState('error')
+      }
+    }
+
+    loadMovies()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const filteredMovies = remoteMovies.filter((movie) => {
     const matchesGenre = !selectedGenre || movie.genre === selectedGenre
     const matchesMood = !selectedMood || movie.mood === selectedMood
 
@@ -19,6 +53,18 @@ function App() {
   })
 
   function handlePickMovie() {
+    if (loadState !== 'ready') {
+      setRecommendedMovie(null)
+      setRecommendationMessage(
+        loadState === 'loading'
+          ? 'Kraunami filmai...'
+          : loadState === 'error'
+            ? loadError
+            : 'Filmų sąrašas tuščias.',
+      )
+      return
+    }
+
     if (filteredMovies.length === 0) {
       setRecommendedMovie(null)
       setRecommendationMessage('Pagal pasirinktus filtrus filmų nerasta.')
@@ -34,6 +80,10 @@ function App() {
     setRecommendedMovie(availableMovies[randomIndex])
     setRecommendationMessage('')
   }
+
+  const genres = [...new Set(remoteMovies.map((movie) => movie.genre).filter(Boolean))]
+  const moods = [...new Set(remoteMovies.map((movie) => movie.mood).filter(Boolean))]
+
   return (
     <div className="app">
       <header className="hero">
@@ -68,7 +118,7 @@ function App() {
                 onChange={(event) => setSelectedGenre(event.target.value)}
               >
                 <option value="">Visi žanrai</option>
-                {DEMO_GENRES.map((genre) => (
+                {genres.map((genre) => (
                   <option key={genre} value={genre}>
                     {genre}
                   </option>
@@ -84,7 +134,7 @@ function App() {
                 onChange={(event) => setSelectedMood(event.target.value)}
               >
                 <option value="">Visos nuotaikos</option>
-                {DEMO_MOODS.map((mood) => (
+                {moods.map((mood) => (
                   <option key={mood} value={mood}>
                     {mood}
                   </option>
@@ -117,23 +167,34 @@ function App() {
         <section className="panel" aria-labelledby="catalog-heading">
           <div className="panel__intro">
             <h2 id="catalog-heading">Filmų sąrašas</h2>
-            <p>
-              Žemiau – keli aiškiai pažymėti demonstraciniai filmai. Tikras
-              katalogas vėliau bus kraunamas iš duomenų bazės.
-            </p>
+            <p>Žemiau rodomi filmai iš duomenų bazės.</p>
           </div>
 
-          <p className="demo-note">Demonstraciniai duomenys</p>
+          {loadState === 'loading' ? (
+            <p className="status" role="status">Kraunami filmai...</p>
+          ) : null}
 
-          <div className="movie-grid">
-            {filteredMovies.length > 0 ? (
-              filteredMovies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
-              ))
+          {loadState === 'error' ? (
+            <p className="status status--error" role="alert">{loadError}</p>
+          ) : null}
+
+          {loadState === 'empty' ? (
+            <p className="status" role="status">Filmų sąrašas tuščias</p>
+          ) : null}
+
+          {loadState === 'ready' ? (
+            filteredMovies.length > 0 ? (
+              <div className="movie-grid">
+                {filteredMovies.map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} />
+                ))}
+              </div>
             ) : (
-              <p>Pagal pasirinktus filtrus filmų nerasta.</p>
-            )}
-          </div>
+              <p className="status" role="status">
+                Pagal pasirinktus filtrus filmų nerasta.
+              </p>
+            )
+          ) : null}
         </section>
 
         <section className="panel" aria-labelledby="favorites-heading">
