@@ -1,5 +1,10 @@
-function MovieCard({ movie, variant = 'catalog', featured = false }) {
-  const isFavorite = variant === 'favorite'
+function MovieCard({
+  movie,
+  variant = 'catalog',
+  featured = false,
+  isFavorite = variant === 'favorite',
+  onToggleFavorite,
+}) {
 
   return (
     <article className={`movie-card${featured ? ' movie-card--featured' : ''}`}>
@@ -28,7 +33,12 @@ function MovieCard({ movie, variant = 'catalog', featured = false }) {
 
       <p className="movie-card__description">{movie.description}</p>
 
-      <button type="button" className="movie-card__action" disabled>
+      <button
+        type="button"
+        className="movie-card__action"
+        onClick={() => onToggleFavorite?.(movie)}
+        aria-pressed={isFavorite}
+      >
         {isFavorite ? 'Pašalinti iš mėgstamiausių' : 'Pridėti prie mėgstamiausių'}
       </button>
     </article>
