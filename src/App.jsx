@@ -112,8 +112,7 @@ function App() {
           <div className="panel__intro">
             <h2 id="catalog-heading">Filmų sąrašas</h2>
             <p>
-              Žemiau rodomi filmai iš duomenų bazės. Demonstraciniai filmai
-              palikti dizainui patikrinti.
+              Žemiau rodomi filmai iš duomenų bazės.
             </p>
           </div>
 
@@ -143,13 +142,6 @@ function App() {
             </div>
           ) : null}
 
-          <p className="demo-note">Demonstraciniai duomenys</p>
-
-          <div className="movie-grid">
-            {DEMO_MOVIES.map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
         </section>
 
         <section className="panel" aria-labelledby="favorites-heading">

@@ -1,3 +1,4 @@
+
 import { isSupabaseConfigured, supabase } from './supabase.js'
 
 const MOVIE_COLUMNS = 'id, title, genre, mood, description, release_year, rating'
@@ -12,6 +13,7 @@ function normalizeMovie(movie) {
 
 export async function fetchMovies() {
   if (!isSupabaseConfigured() || !supabase) {
+    console.error('Supabase klaida: trūksta URL arba rakto .env faile')
     throw new Error('Nepavyko prisijungti prie duomenų bazės.')
   }
 
@@ -22,6 +24,7 @@ export async function fetchMovies() {
     .order('title', { ascending: true })
 
   if (error) {
+    console.error('Supabase klaida:', error)
     throw new Error('Nepavyko prisijungti prie duomenų bazės.')
   }
 
