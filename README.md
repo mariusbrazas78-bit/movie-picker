@@ -1,92 +1,91 @@
 # Movie Picker
 
-Movie Picker – mokomoji filmų rekomendavimo žiniatinklio aplikacija. Ji leidžia peržiūrėti filmų katalogą, filtruoti filmus pagal žanrą ir nuotaiką, atsitiktinai pasirinkti rekomendaciją bei išsaugoti mėgstamiausius.
+Movie Picker – internetinė filmų pasirinkimo aplikacija, skirta greitai rasti filmą vakarui. Vartotojas peržiūri katalogą, filtruoja pagal žanrą ir nuotaiką, gauna atsitiktinę rekomendaciją ir išsaugo mėgstamus filmus. Administratorius gali prisijungti ir tvarkyti katalogą.
 
-## Pagrindinės funkcijos
+## Tikslas ir MVP būklė
 
-- Filmų katalogas įkeliamas iš Supabase duomenų bazės.
-- Katalogą galima filtruoti pagal žanrą ir nuotaiką.
-- Rekomendacija atsitiktinai parenkama iš filtrus atitinkančių filmų. Kai yra keli tinkami filmai, rekomendacija nekartoja ką tik parodyto filmo.
-- Filmus galima pridėti prie mėgstamiausių ir pašalinti iš jų. Sąrašas saugomas naršyklės `localStorage`, todėl lieka po puslapio perkrovimo tame pačiame įrenginyje ir naršyklėje.
-- Įkeliant katalogą rodoma laukimo būsena; tuščias katalogas ir duomenų įkėlimo klaida pateikiami atskirais pranešimais.
+| Funkcija | Būsena ir įgyvendinimas |
+|---|---|
+| Filmų katalogas | Įgyvendinta: filmai skaitomi iš `public.movies` Supabase lentelės. |
+| Filtravimas pagal žanrą ir nuotaiką | Įgyvendinta: filtrai gali būti taikomi kartu. |
+| Atsitiktinė rekomendacija | Įgyvendinta: parenkama iš filtrus atitinkančių filmų; kai įmanoma, nekartojamas paskutinis pasirinkimas. |
+| Mėgstamiausi filmai | Įgyvendinta: galima pridėti ir pašalinti; įrašai saugomi naršyklės `localStorage`. |
+| Administratoriaus prisijungimas / atsijungimas | Įgyvendinta per Supabase Auth; administratoriaus sąsają rodo tik sesijai su `app_metadata.role === 'admin'`. |
+| Filmų CRUD | Aplikacijoje įgyvendintas filmų pridėjimas, redagavimas ir trynimas; faktines teises nustato Supabase RLS. |
+| Įvesties validacija | Įgyvendinta formoje ir duomenų bazės migracijos apribojimuose: būtini laukai, metai 1888–2100, įvertinimas 0–10. |
 
-## Naudojamos technologijos
+> Administratoriaus CRUD RLS politikos nėra versijuotoje migracijoje. Iš repozitorijaus negalima patikrinti, ar jos nustatytos Supabase Dashboard aplinkoje. Prieš administravimą jas reikia išbandyti ir suteikti tik būtiną prieigą.
 
-- **React** – vartotojo sąsajai ir jos būsenai.
-- **Vite** – vietiniam kūrimo serveriui ir projekto surinkimui.
-- **Supabase** – filmų duomenų bazei ir duomenų nuskaitymui.
-- **CSS** – puslapio išvaizdai.
-- **Git** – kodo versijoms valdyti; **GitHub** gali būti naudojamas saugyklai ir bendram darbui.
+## Techniniai sprendimai
 
-## Projekto struktūra
+- **React** naudojamas komponentais paremtai vartotojo sąsajai ir jos būsenai valdyti.
+- **Vite** teikia vietinį kūrimo serverį ir gamybinį surinkimą.
+- **CSS** apibrėžia aplikacijos išvaizdą.
+- **Supabase** teikia PostgreSQL duomenų bazę ir Auth prisijungimą. Naršyklės kodas naudoja tik viešą publishable raktą; prieigą prie duomenų turi riboti RLS.
+- **Git ir GitHub** naudojami kodo versijoms, šakoms ir bendram projekto darbui.
+- Administratoriaus sąsajos matomumas paremtas Supabase sesijos `app_metadata.role` reikšme. Tai nėra duomenų bazės apsauga: kiekvieną rašymo operaciją turi serverio pusėje apriboti Supabase RLS politika.
+- Katalogo ir CRUD klaidos pateikiamos vartotojui, o tinklo atmetimai apdorojami operacijų klaidomis. Įvestis tikrinama prieš siuntimą ir dar kartą apribojama duomenų bazėje.
 
-```text
-src/
-  components/MovieCard.jsx   # filmo kortelė
-  data/demoMovies.js         # demonstraciniai duomenys
-  lib/movies.js              # filmų gavimas iš Supabase
-  lib/supabase.js            # Supabase kliento konfigūracija
-  App.jsx                    # puslapio logika ir pagrindinis vaizdas
-  App.css                    # aplikacijos stiliai
-  index.css                  # bendrieji stiliai
-supabase/migrations/         # duomenų bazės pakeitimų SQL failai
-docs/                        # MVP, idėjos ir duomenų modelio dokumentai
-```
+## Technologijos
 
-`src/data/demoMovies.js` faile yra pavyzdinių filmų įrašai. Aplikacijos katalogas įkeliamas iš Supabase.
+- React
+- Vite
+- CSS
+- Supabase (PostgreSQL ir Auth)
+- Git ir GitHub
 
-## Diegimas ir paleidimas
+## Paleidimas vietoje
 
-Reikalinga įdiegta „Node.js“ ir npm.
+Reikalingi Node.js ir npm.
 
-1. Atsidarykite terminalą projekto kataloge.
-2. Įdiekite priklausomybes:
+1. Įdiekite priklausomybes:
 
    ```bash
    npm install
    ```
 
-3. Nukopijuokite `.env.example` į `.env` ir įrašykite savo Supabase projekto reikšmes (žr. kitą skyrių).
-4. Paleiskite kūrimo serverį:
+2. Nukopijuokite `.env.example` į `.env` ir įrašykite savo Supabase projekto URL bei viešą publishable raktą.
+3. Paleiskite kūrimo serverį:
 
    ```bash
    npm run dev
    ```
 
-5. Terminale parodytą vietinį adresą, dažniausiai `http://localhost:5173`, atidarykite naršyklėje.
+4. Atidarykite terminale nurodytą adresą, įprastai `http://localhost:5173`.
 
-## Supabase konfigūracija ir saugumas
+Be Supabase konfigūracijos aplikacija nepateiks filmų katalogo. `src/data/demoMovies.js` yra pavyzdiniai duomenys, tačiau aplikacija jų automatiškai nenaudoja kaip atsarginio katalogo.
 
-Supabase nustatymų šablonas yra `.env.example`. Nukopijavę jį į `.env`, užpildykite šiuos kintamuosius:
+## Aplinkos kintamieji ir paslaptys
+
+`.env.example` pateikti tik kintamųjų pavadinimai ir netikros pavyzdinės reikšmės:
 
 ```dotenv
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
 
-Reikšmes rasite savo Supabase projekto API nustatymuose. Aplikacija naudoja viešą „publishable“ raktą ir skaito filmus iš `public.movies` lentelės. Viešas raktas nėra slaptažodis: duomenų bazės prieigą būtina riboti Supabase Row Level Security (RLS) taisyklėmis.
+Niekada nedėkite slaptažodžio, `service_role` rakto ar kitos slaptos reikšmės į `VITE_` kintamąjį, naršyklės kodą arba GitHub. `.env` ignoruojamas per `.gitignore`; į repozitorijų įtraukite tik saugų `.env.example`.
 
-Niekada nedėkite `service_role` rakto ar kitų slaptų prisijungimo duomenų į naršyklės kodą, `README.md` ar viešą saugyklą. `.env` yra įtrauktas į `.gitignore`; tikrą `.env` laikykite savo kompiuteryje ir neskelbkite. `.env.example` skirtas tik kintamųjų pavadinimams ir saugiems pavyzdžiams.
+## Supabase duomenų bazė ir saugumas
 
-Mėgstamiausi filmai išsaugomi lokaliai naršyklėje po `movie-picker-favorites` raktu. Jie nėra sinchronizuojami su Supabase ar tarp skirtingų įrenginių ir naršyklių.
+Versijuota migracija `supabase/migrations/20261013170000_create_movies.sql` sukuria `public.movies` lentelę, apribojimus ir įjungia RLS. Joje sukurta politika **Public can read movies**, leidžianti `SELECT` vaidmenims `anon` ir `authenticated`. Migracijoje nėra `INSERT`, `UPDATE` ar `DELETE` RLS politikų.
 
-## Patikros
+Aplikacijos admin sąsaja siunčia filmų kūrimo, redagavimo ir trynimo užklausas, tačiau jos sėkmingos tik tada, jei Supabase aplinkoje šios operacijos tinkamai autorizuotos. Admin CRUD politikų buvimo ar teisingumo Supabase Dashboard’e iš šio repozitorijaus patikrinti negalima. Prieš naudojant administravimą, patikrinkite jas atskiroje testinėje aplinkoje ir suteikite prieigą tik administratoriui. Niekada neišjunkite RLS vien tam, kad CRUD veiktų.
 
-ESLint analizės paleidimas:
+## Testavimas ir kokybės patikros
 
 ```bash
+npm test
 npm run lint
-```
-
-Gamybinės versijos surinkimas:
-
-```bash
 npm run build
 ```
 
-## Žinomi apribojimai
+`npm test` vykdo Node.js automatinius filmų API testus su imituotu klientu; jie nepasiekia gyvos Supabase duomenų bazės. Lint tikrina kodo stilių ir dažnas klaidas, o build sukuria gamybinį aplikacijos variantą. Šios komandos nepakeičia rankinio naršyklės testavimo ar gyvų RLS teisių patikrinimo.
 
-- Aplikacijoje nėra vartotojų registracijos ar prisijungimo.
-- Katalogas priklauso nuo pasiekiamos Supabase duomenų bazės ir joje esančių filmų; demonstraciniai duomenys automatiškai nepakeičia katalogo.
-- Mėgstamiausi filmai saugomi tik vietinėje naršyklės saugykloje.
-- `package.json` nėra atskiro automatinių testų rinkinio; pagrindinės kodo patikros yra `npm run lint` ir `npm run build`.
+## Duomenų modelis ir papildoma dokumentacija
+
+- [Duomenų modelis, apribojimai, ryšiai ir ER diagrama](docs/data-model.md)
+- [MVP planas](docs/mvp.md)
+- [Projekto idėja](docs/idea.md)
+
+Duomenų bazėje saugomi tik filmai. Mėgstamiausi filmų įrašai saugomi vietinėje naršyklės saugykloje ir nėra sinchronizuojami tarp įrenginių.

@@ -40,6 +40,13 @@ function createClient(responseOrError) {
 }
 
 describe('movies API', () => {
+  it('handles an empty catalog returned by a mocked Supabase client', async () => {
+    const movies = await fetchMovies(createClient({ data: [], error: null }))
+
+    assert.deepEqual(movies, [])
+    assert.equal(movies.length, 0)
+  })
+
   it('normalizes catalog numbers and preserves Lithuanian text', async () => {
     const [result] = await fetchMovies(createClient({ data: [movie()], error: null }))
     assert.equal(result.release_year, 2024)
@@ -50,6 +57,18 @@ describe('movies API', () => {
 
   it('returns an empty catalog for a null response', async () => {
     assert.deepEqual(await fetchMovies(createClient({ data: null, error: null })), [])
+  })
+
+  it('converts a mocked Supabase query error into a database connection error', async () => {
+    const client = createClient({
+      data: null,
+      error: { code: '08006', message: 'mocked connection failure' },
+    })
+
+    await assert.rejects(
+      fetchMovies(client),
+      /Nepavyko prisijungti prie duomenų bazės\./,
+    )
   })
 
   it('maps permission failures to a safe, useful message', async () => {

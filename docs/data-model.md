@@ -1,39 +1,27 @@
-# Movie Picker – duomenų modelis
+# Movie Picker duomenų modelis
 
-## 1. Paskirtis
-Dokumentas aprašo Movie Picker aplikacijos duomenų struktūrą, lenteles, laukus, ryšius, apribojimus ir saugumo taisykles.
+Šis dokumentas aprašo šiuo metu versijuotoje Supabase migracijoje esančią duomenų struktūrą. Migracija: [`20261013170000_create_movies.sql`](../supabase/migrations/20261013170000_create_movies.sql).
 
-## 2. Lentelės
-MVP naudojama viena Supabase PostgreSQL lentelė: movies.
-Ji saugo 20–30 filmų katalogą.
+## Lentelės
 
-Mėgstamiausių filmų ID saugomi naršyklės localStorage, todėl papildoma duomenų bazės lentelė nereikalinga.
+Duomenų bazėje yra viena aplikacijos lentelė: `public.movies`. Migracija sukuria ją su šiais laukais:
 
-## 3. Lentelės movies laukai
-
-| Laukas | Duomenų tipas | Privalomas | Taisyklė |
+| Laukas | PostgreSQL tipas | Privalomas | Apribojimai / numatytoji reikšmė |
 |---|---|---|---|
-| id | UUID | Taip | PRIMARY KEY, automatinis UUID |
-| title | TEXT | Taip | NOT NULL, negali būti tuščias |
-| genre | TEXT | Taip | NOT NULL, leidžiamų žanrų sąrašas |
-| mood | TEXT | Taip | NOT NULL, leidžiamų nuotaikų sąrašas |
-| description | TEXT | Taip | NOT NULL, negali būti tuščias |
-| release_year | INTEGER | Taip | NOT NULL, nuo 1888 iki 2100 |
-| rating | NUMERIC(3,1) | Taip | NOT NULL, nuo 0 iki 10 |
-| created_at | TIMESTAMPTZ | Taip | NOT NULL, DEFAULT now() |
+| `id` | `UUID` | Taip | Pirminis raktas; numatytoji reikšmė `gen_random_uuid()`. |
+| `title` | `TEXT` | Taip | Negali būti `NULL` ar tuščias / sudarytas tik iš tarpų (`CHECK`). |
+| `genre` | `TEXT` | Taip | Viena iš migracijoje išvardytų reikšmių: `Komedija`, `Drama`, `Veiksmo`, `Romantinis`, `Mokslinė fantastika`. |
+| `mood` | `TEXT` | Taip | Viena iš reikšmių: `Linksma`, `Romantiška`, `Rimta`, `Įtempta`. |
+| `description` | `TEXT` | Taip | Negali būti `NULL` ar tuščias / sudarytas tik iš tarpų (`CHECK`). |
+| `release_year` | `INTEGER` | Taip | Reikšmė nuo 1888 iki 2100 imtinai (`CHECK`). |
+| `rating` | `NUMERIC(3,1)` | Taip | Reikšmė nuo 0 iki 10 imtinai (`CHECK`). |
+| `created_at` | `TIMESTAMPTZ` | Taip | Numatytoji reikšmė `now()`. |
 
-id numatytoji reikšmė: gen_random_uuid().
+## Ryšiai ir vietiniai duomenys
 
-genre reikšmės: Komedija, Drama, Veiksmo, Romantinis, Mokslinė fantastika.
+`movies` yra vienintelė migracijoje sukurta aplikacijos lentelė. Užsienio raktų ar ryšių tarp duomenų bazės lentelių nėra. Mėgstamiausi filmai laikomi naršyklės `localStorage` raktu `movie-picker-favorites`; tai nėra duomenų bazės lentelė ir ji nesinchronizuojama tarp naršyklių ar įrenginių.
 
-mood reikšmės: Linksma, Romantiška, Rimta, Įtempta.
-
-## 4. Ryšiai
-Duomenų bazėje yra viena lentelė, todėl nėra tarplentelinių ryšių ar užsienio raktų.
-
-Naršyklės localStorage saugomi mėgstamiausių filmų ID turi atitikti movies.id. Pašalinto filmo ID aplikacija ignoruoja arba pašalina iš vietinio sąrašo.
-
-## 5. ER diagrama
+## ER diagrama
 
 ```mermaid
 erDiagram
@@ -49,34 +37,12 @@ erDiagram
     }
 ```
 
-## 6. Apribojimai ir duomenų vientisumas
-- id yra unikalus pirminis raktas.
-- title ir description negali būti tušti arba sudaryti tik iš tarpų.
-- genre ir mood turi atitikti leidžiamas reikšmes.
-- rating turi būti tarp 0 ir 10.
-- release_year turi būti tarp 1888 ir 2100.
-- created_at automatiškai užpildomas dabartiniu laiku.
+## RLS ir prieigos modelis
 
-## 7. Saugumas
-- Supabase lentelėje įjungiamas Row Level Security (RLS).
-- Viešiems naudotojams leidžiama tik SELECT operacija.
-- Viešiems naudotojams neleidžiamos INSERT, UPDATE ir DELETE operacijos.
-- Filmų katalogą administratorius tvarko per Supabase Dashboard su tinkamomis teisėmis.
-- React aplikacijoje naudojamas tik viešas Supabase publishable / anon raktas, laikantis RLS.
-- Slaptas service_role raktas niekada nededamas į naršyklės kodą.
+Versijuota migracija įjungia Row Level Security (`ALTER TABLE public.movies ENABLE ROW LEVEL SECURITY`) ir sukuria politiką `Public can read movies`, kuri leidžia `SELECT` vaidmenims `anon` ir `authenticated`.
 
-## 8. Duomenų operacijos
-- SELECT – nuskaityti filmus.
-- INSERT – administratoriui pridėti filmą.
-- UPDATE – administratoriui atnaujinti filmą.
-- DELETE – administratoriui pašalinti filmą.
+Migracijoje nėra `INSERT`, `UPDATE` ar `DELETE` politikų. Aplikacijoje yra administratoriaus prisijungimas ir filmų CRUD sąsaja, tačiau duomenų bazės rašymo prieiga turi būti atskirai apribota RLS politikomis. Galimų administratoriaus CRUD politikų Supabase Dashboard aplinkoje iš šio repozitorijaus patikrinti negalima. Realaus projekto politikas reikia patikrinti Dashboard aplinkoje arba Supabase administravimo priemonėmis; vien administratoriaus vaidmens patikros aplikacijoje nepakanka duomenų bazės prieigai apriboti.
 
-## 9. MVP apribojimai
-- Nėra vartotojų registracijos.
-- Nėra profilių lentelės.
-- Nėra mėgstamiausių filmų lentelės Supabase.
-- Nėra išorinio filmų API.
-- Filmų katalogas pradžioje sudaromas rankiniu būdu.
+## Validavimas
 
-## 10. Rezultatas
-Patvirtintas paprastas Movie Picker duomenų modelis, pagal kurį kitame etape bus galima sukurti Supabase lentelę ir saugumo taisykles.
+Forma prieš siunčiant tikrina privalomus pavadinimo, žanro, nuotaikos ir aprašymo laukus, išleidimo metų intervalą 1888–2100 bei įvertinimo intervalą 0–10. Migracija šiuos duomenų bazės laukus taip pat riboja `NOT NULL` ir `CHECK` apribojimais. Pavadinimui ir aprašymui sąsajoje nustatyti atitinkamai 200 ir 2000 simbolių limitai; tokio ilgio limitai pateiktoje migracijoje nenustatyti.
